@@ -1,0 +1,27 @@
+{
+  "name": "photo-portfolio-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "package:getPhotos": "npm run build && zip -j dist/getPhotos.zip dist/handlers/getPhotos.js",
+    "package:getPhotoById": "npm run build && zip -j dist/getPhotoById.zip dist/handlers/getPhotoById.js",
+    "package:getUploadUrl": "npm run build && zip -j dist/getUploadUrl.zip dist/handlers/getUploadUrl.js",
+    "package:savePhotoMeta": "npm run build && zip -j dist/savePhotoMeta.zip dist/handlers/savePhotoMeta.js",
+    "package:all": "npm run build && zip -j dist/getPhotos.zip dist/handlers/getPhotos.js && zip -j dist/getPhotoById.zip dist/handlers/getPhotoById.js && zip -j dist/getUploadUrl.zip dist/handlers/getUploadUrl.js && zip -j dist/savePhotoMeta.zip dist/handlers/savePhotoMeta.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.616.0",
+    "@aws-sdk/client-s3": "^3.616.0",
+    "@aws-sdk/lib-dynamodb": "^3.616.0",
+    "@aws-sdk/s3-request-presigner": "^3.616.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.129",
+    "@types/node": "^20.11.30",
+    "typescript": "^5.3.3"
+  }
+}

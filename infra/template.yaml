@@ -1,0 +1,322 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: photo-portfolio serverless stack
+
+Parameters:
+  ProjectPrefix:
+    Type: String
+    Default: photo-portfolio
+  Stage:
+    Type: String
+    Default: dev
+
+Mappings: {}
+
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Stage}-web"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Stage}-images"
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  PhotosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${ProjectPrefix}-${Stage}-photos"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: photoId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: photoId
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectPrefix
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectPrefix}-${Stage}-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaDynamoDBAndS3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt PhotosTable.Arn
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:AbortMultipartUpload
+                Resource: !Sub "${ImagesBucket.Arn}/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  GetPhotosFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectPrefix}-${Stage}-getPhotos"
+      Handler: dist/handlers/getPhotos.handler
+      Runtime: nodejs20.x
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref PhotosTable
+      Code:
+        S3Bucket: your-artifacts-bucket
+        S3Key: lambda/getPhotos.zip
+
+  GetPhotoByIdFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectPrefix}-${Stage}-getPhotoById"
+      Handler: dist/handlers/getPhotoById.handler
+      Runtime: nodejs20.x
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref PhotosTable
+      Code:
+        S3Bucket: your-artifacts-bucket
+        S3Key: lambda/getPhotoById.zip
+
+  GetUploadUrlFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectPrefix}-${Stage}-getUploadUrl"
+      Handler: dist/handlers/getUploadUrl.handler
+      Runtime: nodejs20.x
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImagesBucket
+          TABLE_NAME: !Ref PhotosTable
+      Code:
+        S3Bucket: your-artifacts-bucket
+        S3Key: lambda/getUploadUrl.zip
+
+  SavePhotoMetaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectPrefix}-${Stage}-savePhotoMeta"
+      Handler: dist/handlers/savePhotoMeta.handler
+      Runtime: nodejs20.x
+      Role: !GetAtt LambdaRole.Arn
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref PhotosTable
+      Code:
+        S3Bucket: your-artifacts-bucket
+        S3Key: lambda/savePhotoMeta.zip
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${ProjectPrefix}-${Stage}-http-api"
+      ProtocolType: HTTP
+
+  HttpIntegrationGetPhotos:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetPhotosFunction.Arn}/invocations"
+      PayloadFormatVersion: '2.0'
+  HttpIntegrationGetPhotoById:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetPhotoByIdFunction.Arn}/invocations"
+      PayloadFormatVersion: '2.0'
+  HttpIntegrationGetUploadUrl:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetUploadUrlFunction.Arn}/invocations"
+      PayloadFormatVersion: '2.0'
+  HttpIntegrationSavePhotoMeta:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SavePhotoMetaFunction.Arn}/invocations"
+      PayloadFormatVersion: '2.0'
+
+  RouteGetPhotos:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "GET /photos"
+      Target: !Sub "integrations/${HttpIntegrationGetPhotos}"
+  RouteGetPhotoById:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "GET /photos/{id}"
+      Target: !Sub "integrations/${HttpIntegrationGetPhotoById}"
+  RouteGetUploadUrl:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /photos/upload-url"
+      Target: !Sub "integrations/${HttpIntegrationGetUploadUrl}"
+  RouteSavePhotoMeta:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /photos"
+      Target: !Sub "integrations/${HttpIntegrationSavePhotoMeta}"
+
+  Deployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - RouteGetPhotos
+      - RouteGetPhotoById
+      - RouteGetUploadUrl
+      - RouteSavePhotoMeta
+    Properties:
+      ApiId: !Ref HttpApi
+
+  StageDev:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: !Ref Stage
+      AutoDeploy: true
+      DeploymentId: !Ref Deployment
+
+  PermissionGetPhotos:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetPhotosFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/photos"
+  PermissionGetPhotoById:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetPhotoByIdFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/photos/*"
+  PermissionGetUploadUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetUploadUrlFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/photos/upload-url"
+  PermissionSavePhotoMeta:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SavePhotoMetaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/photos"
+
+  CloudFrontOAI:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      Name: !Sub "${ProjectPrefix}-${Stage}-oac"
+      OriginAccessControlConfig:
+        Name: !Sub "${ProjectPrefix}-${Stage}-oac-config"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: website-origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD, OPTIONS]
+          ForwardedValues:
+            QueryString: false
+        Origins:
+          - Id: website-origin
+            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !Ref CloudFrontOAI
+          - Id: api-origin
+            DomainName: !Sub "${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+        CacheBehaviors:
+          - PathPattern: "/api/*"
+            TargetOriginId: api-origin
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            ForwardedValues:
+              QueryString: true
+              Headers: [Authorization]
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API URL
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+  WebsiteBucketName:
+    Description: Static site bucket
+    Value: !Ref WebsiteBucket
+  ImagesBucketName:
+    Description: Image bucket
+    Value: !Ref ImagesBucket
+  DynamoDBTable:
+    Description: Photos table
+    Value: !Ref PhotosTable
+  CloudFrontDomain:
+    Description: CloudFront URL
+    Value: !GetAtt CloudFrontDistribution.DomainName
+
