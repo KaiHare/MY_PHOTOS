@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MY_PHOTOS 影像集</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">MY_PHOTOS</div>
+      <nav class="nav">
+        <a href="#collections">作品集</a>
+        <a href="#admin">管理后台</a>
+        <a href="#architecture" class="pill">无服务器架构</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__content">
+          <p class="eyebrow">摄影师的精选作品</p>
+          <h1>留白与光影，构成高级感的影像</h1>
+          <p class="lede">用极简的方式记录人物、空间与情绪，每一次快门都呈现克制而纯粹的气质。</p>
+          <div class="actions">
+            <a class="button primary" href="#collections">查看作品</a>
+            <a class="button ghost" href="#architecture">了解架构</a>
+          </div>
+        </div>
+        <div class="hero__preview">
+          <div class="photo-frame">
+            <div class="tag">New</div>
+            <div class="tone"></div>
+            <p class="caption">「冷调人像」系列</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="collections" class="section section--grid">
+        <div class="section__header">
+          <h2>精选系列</h2>
+          <p>以柔和中性色与留白，将人物与空间的故事娓娓道来。</p>
+        </div>
+        <div class="grid">
+          <article class="card">
+            <div class="card__image muted-gradient"></div>
+            <div class="card__body">
+              <h3>光影人像</h3>
+              <p>以自然光勾勒轮廓，展现人物最真实的层次感。</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__image dusk-gradient"></div>
+            <div class="card__body">
+              <h3>空间叙事</h3>
+              <p>用极简构图与秩序线条，让建筑诉说情绪。</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__image sand-gradient"></div>
+            <div class="card__body">
+              <h3>静物质感</h3>
+              <p>细腻的材质与柔和光源，营造高级的静谧氛围。</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="about" class="section section--split">
+        <div class="section__header">
+          <h2>关于摄影师</h2>
+          <p>坚持以简洁、克制、富有呼吸感的视觉语言，完成每一个项目。</p>
+        </div>
+        <div class="split">
+          <div class="split__text">
+            <p>从人像到商业空间，作品被多家设计媒体收录。擅长在留白中突出主体，以高级灰和柔光处理呈现质感。</p>
+            <p>重点展示与沉淀作品，保持网站克制而纯粹的表达。</p>
+          </div>
+          <div class="pill-list">
+            <span class="pill">极简风格</span>
+            <span class="pill">自然光</span>
+            <span class="pill">色彩管理</span>
+            <span class="pill">作品沉淀</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin" class="section section--cta">
+        <div class="cta-card">
+          <div>
+            <p class="eyebrow">管理后台</p>
+            <h3>上传与整理作品，保持展示的高级感</h3>
+            <p>后台支持分类、标签与批量上传，发布后自动同步到前台作品集，确保展示始终最新且统一风格。</p>
+          </div>
+          <a class="button primary" href="#architecture">查看部署思路</a>
+        </div>
+      </section>
+
+      <section id="architecture" class="section section--grid section--architecture">
+        <div class="section__header">
+          <h2>无服务器架构（AWS）</h2>
+          <p>用 Serverless 方案搭建后台上传与前台分发，轻量、弹性、免运维。</p>
+        </div>
+        <div class="grid grid--dense">
+          <article class="card">
+            <div class="card__body">
+              <p class="eyebrow">静态前台</p>
+              <h3>Amazon S3 + CloudFront</h3>
+              <p>HTML/CSS 前端托管在 S3，CloudFront 全球加速，展示纯净、快速、稳定。</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__body">
+              <p class="eyebrow">媒体存储</p>
+              <h3>作品原图存放在 S3</h3>
+              <p>管理后台上传图片到 S3，使用生命周期与版本控制，保证高质量与安全性。</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__body">
+              <p class="eyebrow">后台接口</p>
+              <h3>API Gateway + Lambda</h3>
+              <p>无服务器函数处理上传、写入元数据，低成本扩展；可结合 Step Functions 做批处理。</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__body">
+              <p class="eyebrow">身份与权限</p>
+              <h3>Amazon Cognito</h3>
+              <p>为管理后台提供登录、角色管理，确保只有授权账号可上传或调整作品信息。</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__body">
+              <p class="eyebrow">数据索引</p>
+              <h3>DynamoDB 元数据</h3>
+              <p>以作品系列、标签、发布时间索引文件，前台按需读取生成作品墙。</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>© 2024 MY_PHOTOS Studio</span>
+      <span class="dot"></span>
+      <span>极简 · 高级 · 质感</span>
+    </footer>
+  </div>
+</body>
+</html>
